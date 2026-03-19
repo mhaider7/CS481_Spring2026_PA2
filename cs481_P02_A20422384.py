@@ -1,6 +1,7 @@
 # Names: Hamza Syed, Mazin Haider
 
 import pandas as pd
+import sys
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -23,3 +24,18 @@ df = df.sample(frac=1, random_state=42).reset_index(drop=True)
 
 print(df.head)
 
+#Check for odd characters, emoji's
+
+
+###Command line arguments
+# Algo : 0 = Naive Bayes | 1 = k-NN
+if len(sys.argv) != 3:
+    ALGO = 0
+    TRAIN_SIZE = 80
+    TEST_SIZE = 20
+else:
+    ALGO = int(sys.argv[1])
+    TRAIN_SIZE = int(sys.argv[2])
+    TEST_SIZE = 100 - TRAIN_SIZE
+
+print(ALGO, TRAIN_SIZE, TEST_SIZE)
