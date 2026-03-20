@@ -3,6 +3,7 @@
 import pandas as pd
 import sys, re
 from bs4 import BeautifulSoup
+import math
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -83,19 +84,26 @@ final_ds = pd.concat([fake_df, true_df])
 final_ds = final_ds.sample(frac=1, random_state=42).reset_index(drop=True)
 
 #Send to csv for final dataset observation
-final_ds.to_csv("final_preprocessed_ds.csv")
+#final_ds.to_csv("final_preprocessed_ds.csv")
 
 ###Command line arguments
 # Algo : 0 = Naive Bayes | 1 = k-NN
-if len(sys.argv) != 3:
+if len(sys.argv) != 3 or int(sys.argv[2]) < 50 or int(sys.argv[2]) > 90:
     ALGO = 0
     TRAIN_SIZE = 80
-    TEST_SIZE = 20
 else:
-    ALGO = int(sys.argv[1])
-    TRAIN_SIZE = int(sys.argv[2])
-    TEST_SIZE = 100 - TRAIN_SIZE
+    if int(sys.argv[1]) < 0 or int(sys.argv[1]) > 1:
+        ALGO = 0
+        TRAIN_SIZE = int(sys.argv[2])
+    else:
+        ALGO = int(sys.argv[1])
+        TRAIN_SIZE = int(sys.argv[2])
 
-#print(ALGO, TRAIN_SIZE, TEST_SIZE)
+###train_test_split splits the dataframe based on the size given as an argument
+def train_test_split(data_set, train_size):
+    train_length = math.floor(len(data_set) * (train_size / 100))
+    test_length = len(data_set) - train_length
+    train_set = data_set.head(train_length)
+    test_set = data_set.tail(test_length)
+    return train_set, test_set
 
-###Data split
