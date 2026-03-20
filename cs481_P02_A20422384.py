@@ -3,8 +3,6 @@
 import pandas as pd
 import sys, re
 from bs4 import BeautifulSoup
-import numpy as np
-import random
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -64,24 +62,28 @@ for i in range(len(FAKE)): FAKE[i] = re.sub(r'@[^\s]+', '', FAKE[i])
 for i in range(len(TRUE)): TRUE[i] = re.sub(r'@[^\s]+', '', TRUE[i])
 
 #note: Pattern matching here takes a long time to compute
-#Drop punctuation (parens, comma, period, exclamation, question)
-for i in range(len(FAKE)): FAKE[i] = re.sub(r'"|!|\.|\?|\(|\)|\[|\]|,|\\|\/|;|:', '', FAKE[i])
-for i in range(len(TRUE)): TRUE[i] = re.sub(r'"|!|\.|\?|\(|\)|\[|\]|,|\\|\/|;|:', '', TRUE[i])
+#Drop punctuation and extra spaces
+for i in range(len(FAKE)): FAKE[i] = re.sub(r'[^\w\s]', '', FAKE[i]); FAKE[i] = re.sub(r' +', ' ', FAKE[i]) 
+for i in range(len(TRUE)): TRUE[i] = re.sub(r'[^\w\s]', '', TRUE[i]); TRUE[i] = re.sub(r' +', ' ', TRUE[i])
+#for i in range(len(FAKE)): FAKE[i] = re.sub(r'"|!|\.|\?|\(|\)|\[|\]|,|\\|\/|;|:', '', FAKE[i])
+#for i in range(len(TRUE)): TRUE[i] = re.sub(r'"|!|\.|\?|\(|\)|\[|\]|,|\\|\/|;|:', '', TRUE[i])
 
 #Lower-case everything
 for i in range(len(FAKE)): FAKE[i] = FAKE[i].lower()
 for i in range(len(TRUE)): TRUE[i] = TRUE[i].lower()
 
-#Add fake and true element for each list
-for i in range(len(FAKE)): FAKE[i] = [FAKE[i]]; FAKE[i].append('fake')
-for i in range(len(TRUE)): TRUE[i] = [TRUE[i]]; TRUE[i].append('true')
-
-#Merge fake and true lists
-DATA = FAKE + TRUE
-
 #Convert to dataframe
+fake_df = pd.DataFrame({'text': FAKE, 'label': 'False'})
+true_df = pd.DataFrame({'text': TRUE, 'label': 'True'})
+
+#Concat datasets
+final_ds = pd.concat([fake_df, true_df])
 
 #Shuffle dataframe
+final_ds = final_ds.sample(frac=1, random_state=42).reset_index(drop=True)
+
+#Send to csv for final dataset observation
+final_ds.to_csv("final_preprocessed_ds.csv")
 
 ###Command line arguments
 # Algo : 0 = Naive Bayes | 1 = k-NN
