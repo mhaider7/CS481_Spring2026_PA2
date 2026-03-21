@@ -4,6 +4,8 @@ import pandas as pd
 import sys, re
 from bs4 import BeautifulSoup
 import math
+from nltk.probability import FreqDist
+from nltk.tokenize import word_tokenize
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -107,18 +109,55 @@ def train_test_split(data_set, train_size):
     test_set = data_set.tail(test_length)
     return train_set, test_set
 
+###train_naive_bayes function trains the model using naive bayes, returning all necessary probabilities for classification
 def train_naive_bayes(train_set, V):
     #prior probabilites
     false_count, true_count = train_set.value_counts(subset=['label'])
     p_false = false_count / len(train_set)
     p_true = true_count / len(train_set)
-    #dictionary named fake_dict, storing probabilities for each word
-    #dictionary named true_dict, storing probabilities for each word
-    #with laplaces smoothing
-    #return (4) both prior probs and dictionaries
-    pass
 
-def test_naive_bayes():
+    #conditional probabilites
+    #split df into false instances
+    false_df = train_set[train_set['label'] == 'False']
+    false = {}; false_count = 0
+    #Loop over each instance of false, to create the frequency dictionary
+    #Find count of each word in the false label text
+    for _, row in false_df.iterrows():
+        sent = row['text']
+        for i in sent.split():
+            false_count += 1
+            if i in false:
+                false[i] += 1
+            else:
+                false[i] = 1
+
+    p_word_given_false = {}
+    #Loop through false dict and calculate prbabilities for each word given classification of false
+    for key, val in false.items():
+        prob = (val + 1) / (false_count + V)
+        p_word_given_false[key] = prob
+
+    #Follow the same procedure above with true set
+    true_df = train_set[train_set['label'] == 'True']
+    true = {}; true_count = 0
+    for _, row in true_df.iterrows():
+        sent = row['text']
+        for i in sent.split():
+            true_count += 1
+            if i in true:
+                true[i] += 1
+            else:
+                true[i] = 1
+
+    p_word_given_true = {}
+    for key, val in true.items():
+        prob = (val + 1) / (true_count + V)
+        p_word_given_true[key] = prob
+    
+    #Return prior and conditional probabilites
+    return p_false, p_true, p_word_given_false, p_word_given_true
+
+def test_naive_bayes(p_false, p_true, p_word_given_false, p_word_given_true):
     #If test_set:
     #Loop through each sentence of test set
     #Use if word is in fake_dict, multiply to a variable starting w/ val 1 (dont forget p(fake))
@@ -147,14 +186,20 @@ for text in data_set['text']:
     vocab.update(set(text.split()))
 V = len(vocab)
 
+#Split data
+train_set, test_set = train_test_split(data_set, TRAIN_SIZE)
+
+###Console output (where the models are called and run and sentences is classified)
 print("Haider, Mazin, A20422384 solution:")
 print("Training set size:", TRAIN_SIZE,"%")
 if ALGO == 0:
     print("Classifier type: Naive Bayes")
+    print("\nTraining classifier...")
+    p_false, p_true, p_word_given_false, p_word_given_true = train_naive_bayes(train_set, V)
+    print("Testing classifier...")
+    test_naive_bayes(p_false, p_true, p_word_given_false, p_word_given_true)
 else:
     print("Classifier type: k-NN")
 
-train_set, test_set = train_test_split(data_set, TRAIN_SIZE)
-print("\nTraining classifier...")
-train_naive_bayes(train_set, V)
+
 
