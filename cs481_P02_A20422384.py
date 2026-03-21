@@ -78,13 +78,13 @@ fake_df = pd.DataFrame({'text': FAKE, 'label': 'False'})
 true_df = pd.DataFrame({'text': TRUE, 'label': 'True'})
 
 #Concat datasets
-final_ds = pd.concat([fake_df, true_df])
+data_set = pd.concat([fake_df, true_df])
 
 #Shuffle dataframe
-final_ds = final_ds.sample(frac=1, random_state=42).reset_index(drop=True)
+data_set = data_set.sample(frac=1, random_state=42).reset_index(drop=True)
 
 #Send to csv for final dataset observation
-#final_ds.to_csv("final_preprocessed_ds.csv")
+#data_set.to_csv("final_preprocessed_ds.csv")
 
 ###Command line arguments
 # Algo : 0 = Naive Bayes | 1 = k-NN
@@ -106,4 +106,55 @@ def train_test_split(data_set, train_size):
     train_set = data_set.head(train_length)
     test_set = data_set.tail(test_length)
     return train_set, test_set
+
+def train_naive_bayes(train_set, V):
+    #prior probabilites
+    false_count, true_count = train_set.value_counts(subset=['label'])
+    p_false = false_count / len(train_set)
+    p_true = true_count / len(train_set)
+    #dictionary named fake_dict, storing probabilities for each word
+    #dictionary named true_dict, storing probabilities for each word
+    #with laplaces smoothing
+    #return (4) both prior probs and dictionaries
+    pass
+
+def test_naive_bayes():
+    #If test_set:
+    #Loop through each sentence of test set
+    #Use if word is in fake_dict, multiply to a variable starting w/ val 1 (dont forget p(fake))
+    #Store final for each in a dictionary with the label
+    #else:
+    #Do the same, but use a one value dict and logrithm
+
+    #If test set:
+    #Loop through each sentence of test set
+    #Use if word is in true_dict, multiply to a variable starting w/ val 1 (dont forget p(true))
+    #Store final for each in a dictionary with the label
+    #else:
+    #do the same, but use a one value dict and logrithm
+
+    #If test set:
+    #loop through each dict, compare, if statement if greater than, then compare with label, add to dictionary for tp, fp, tn, fn
+    #return (4) tp,tn,fp,fn
+    #else:
+    #return classification and probabilites (3)
+    pass
+
+
+#vocab: count all words in text column without repeting words
+V = 0; vocab = set()
+for text in data_set['text']:
+    vocab.update(set(text.split()))
+V = len(vocab)
+
+print("Haider, Mazin, A20422384 solution:")
+print("Training set size:", TRAIN_SIZE,"%")
+if ALGO == 0:
+    print("Classifier type: Naive Bayes")
+else:
+    print("Classifier type: k-NN")
+
+train_set, test_set = train_test_split(data_set, TRAIN_SIZE)
+print("\nTraining classifier...")
+train_naive_bayes(train_set, V)
 
