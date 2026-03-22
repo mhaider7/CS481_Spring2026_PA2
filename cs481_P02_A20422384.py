@@ -4,8 +4,6 @@ import pandas as pd
 import sys, re
 from bs4 import BeautifulSoup
 import math
-from nltk.probability import FreqDist
-from nltk.tokenize import word_tokenize
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -157,27 +155,91 @@ def train_naive_bayes(train_set, V):
     #Return prior and conditional probabilites
     return p_false, p_true, p_word_given_false, p_word_given_true
 
-def test_naive_bayes(p_false, p_true, p_word_given_false, p_word_given_true):
-    #If test_set:
-    #Loop through each sentence of test set
-    #Use if word is in fake_dict, multiply to a variable starting w/ val 1 (dont forget p(fake))
-    #Store final for each in a dictionary with the label
-    #else:
-    #Do the same, but use a one value dict and logrithm
+###test_naive_bayes tests the model on the test set or the sentence that the user inputs and returns either confusion matrix metrics or sentence probabilites
+def test_naive_bayes(test, p_false, p_true, p_word_given_false, p_word_given_true):
+    false = []
+    true = []
+    sentence_false_acc = 0
+    sentence_true_acc = 0
+    #Check if the input is a dataframe or a sentence
+    if isinstance(test, pd.DataFrame):
+        #Loop through each sentence of test set
+        for _, row in test.iterrows():
+            p_false_given_sentence = 1
+            p_true_given_sentence = 1
+            sent = row['text']
+            #Loop through words of sentence
+            for word in sent.split():
+                #If word is in the probability dictionary, multiply to the accumulator
+                if word in p_word_given_false:
+                    p_false_given_sentence *= p_word_given_false[word]
+                if word in p_word_given_true:
+                    p_true_given_sentence *= p_word_given_true[word]
+                #If word is not, skip
+            #Multiply accumulator to the prior probability
+            p_false_given_sentence *= p_false
+            p_true_given_sentence *= p_true
+            #Append to the list of probabilites of the test set
+            false.append(p_false_given_sentence)
+            true.append(p_true_given_sentence)
+    else:
+        #Preprocess, remove non-words, digits, spaces
+        preprocess_txt = re.sub(r'[^\w\s]', '', test)
+        preprocess_txt = re.sub(r'\d+', '', preprocess_txt)
+        preprocess_txt = re.sub(r' +', ' ', preprocess_txt)
+        #Loop through words of sentence
+        for word in preprocess_txt.split():
+            #If word is in the probability dictionary
+            if word in p_word_given_false:
+                #Take log and 'add' it to accumulator
+                sentence_false_acc += math.log(p_word_given_false[word], 2)
+            if word in p_word_given_true:
+                sentence_true_acc += math.log(p_word_given_true[word], 2)
+        #Add accumulator to the log of the prior probability
+        sentence_false_acc += math.log(p_false, 2)
+        sentence_true_acc += math.log(p_true, 2)
+        sentence_false_prob = pow(2, sentence_false_acc)
+        sentence_true_prob = pow(2, sentence_true_acc)
+    
+    index = 0
+    metric = { 'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0 }
+    #If test instance is dataframe:
+    if isinstance(test, pd.DataFrame):
+        #zip true and false lists and loop
+        probs = zip(false, true)
+        for false_prob, true_prob in probs:
+            #Access value of corresponding label in dataframe
+            label = test['label'].iloc[index]
+            index += 1
+            #If true is greater than false, increment 
+            if true_prob > false_prob:
+                #If it matches label true in the dataset
+                if label == 'True':
+                    metric['tp'] += 1
+                else:
+                    metric['fp'] += 1
+            else:
+                #If it matches label false
+                if label == 'False':
+                    metric['tn'] += 1
+                else:
+                    metric['fn'] += 1
+        return metric['tp'], metric['fp'], metric['tn'], metric['fn']
+    else:
+        return sentence_false_prob, sentence_true_prob
 
-    #If test set:
-    #Loop through each sentence of test set
-    #Use if word is in true_dict, multiply to a variable starting w/ val 1 (dont forget p(true))
-    #Store final for each in a dictionary with the label
-    #else:
-    #do the same, but use a one value dict and logrithm
-
-    #If test set:
-    #loop through each dict, compare, if statement if greater than, then compare with label, add to dictionary for tp, fp, tn, fn
-    #return (4) tp,tn,fp,fn
-    #else:
-    #return classification and probabilites (3)
-    pass
+###metric outputs the passed in and derived metric values
+def metric(tp, fp, tn, fn):
+    print("Number of true positives:", tp)
+    print("Number of true negatives:", tn)
+    print("Number of false positives:", fp)
+    print("Number of false negatives:", fn)
+    print("Sensitivity (recall):", tp / (tp + fn))
+    print("Specificity:", tn / (tn + fp))
+    print("Precision:", tp / (tp + fp))
+    print("Negative predictive value:", tn / (tn + fn))
+    print("Accuracy:", (tp + tn) / (tp + tn + fp + fn))
+    print("F1-score:", 2 * ( ( (tp / (tp + fp)) * (tp / (tp + fn)) ) / ( (tp / (tp + fp)) + (tp / (tp + fn)) ) ))
 
 
 #vocab: count all words in text column without repeting words
@@ -197,7 +259,24 @@ if ALGO == 0:
     print("\nTraining classifier...")
     p_false, p_true, p_word_given_false, p_word_given_true = train_naive_bayes(train_set, V)
     print("Testing classifier...")
-    test_naive_bayes(p_false, p_true, p_word_given_false, p_word_given_true)
+    tp, fp, tn, fn = test_naive_bayes(test_set, p_false, p_true, p_word_given_false, p_word_given_true)
+    print("\nTest results / metrics:")
+    metric(tp, fp, tn, fn)
+
+    option = 'Y'
+    while (option[0].lower().strip() == 'y'):
+        print()
+        sentence = input("Enter your sentence/document: ")
+        sent_p_false, sent_p_true = test_naive_bayes(sentence, p_false, p_true, p_word_given_false, p_word_given_true)
+        print("\nSentence/document S:", sentence)
+        if sent_p_true > sent_p_false:
+            print("was classified as True")
+        else:
+            print("was classified as False")
+        print("P(False | S) =", sent_p_false)
+        print("P(True | S) =", sent_p_true)
+        print()
+        option = input("Do you want to enter another sentence [Y/N]? ")
 else:
     print("Classifier type: k-NN")
 
