@@ -279,6 +279,51 @@ if ALGO == 0:
         option = input("Do you want to enter another sentence [Y/N]? ")
 else:
     print("Classifier type: k-NN")
+    print("\nTraining classifier...")
+    
+    # Train kNN (store training data)
+    train_data = train_knn(train_set, vocab)
+
+    # Determine optimal k (try odd values from 1 to 21)
+    print("Finding optima k value...")
+    best_k = 5 # default
+    best_accuracy = 0
+
+    # Use a small validation set from trainingdata to find optimal k
+    # Split training data into train and validation (80/20)
+    val_size = int(len(train_set) * 0.2)
+    train_subset = train_set.head(len(train_set) - val_size)
+    val_subset = train_set.tail(val_size)
+
+    # Train on subset
+    train_subset_data = train_knn(train_subset, vocab)
+
+    # Train different k values
+    for k in range(1, 22, 2): # try odd k values from 1 to 21
+        tp, fp, tn, fn, = test_knn(val_subset, train_subset_data, k, vocab)
+        accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_k = k
+
+    print(f"Selected k = {best_k} with validation accuracy = {best_accuracy:.4f}")
+
+    print("Testing classifier...")
+    tp, fp, tn, fn = test_knn(test_set, train_data, best_k, vocab)
+    print("n\Test results / metrics:")
+    metric(tp, fp, tn, fn)
+
+    option = 'Y'
+    while (option[0].lower().strip() == 'y'):
+        print()
+        sentence = input("Enter your sentence/document: ")
+        predicted_class = predict_knn(sentence, train_data, best_k, vocab)
+        print("\nSentence/document S:", sentence)
+        print(f"was classified as {predicted_class}")
+        print()
+        option = input("Do you want to enter another sentence [Y/N]?")
+
+
 
 
 
