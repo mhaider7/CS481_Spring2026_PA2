@@ -310,7 +310,7 @@ else:
 
     print("Testing classifier...")
     tp, fp, tn, fn = test_knn(test_set, train_data, best_k, vocab)
-    print("n\Test results / metrics:")
+    print("\nTest results / metrics:")
     metric(tp, fp, tn, fn)
 
     option = 'Y'
