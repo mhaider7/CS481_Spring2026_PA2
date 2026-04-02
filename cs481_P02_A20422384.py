@@ -234,12 +234,12 @@ def metric(tp, fp, tn, fn):
     print("Number of true negatives:", tn)
     print("Number of false positives:", fp)
     print("Number of false negatives:", fn)
-    print("Sensitivity (recall):", tp / (tp + fn))
-    print("Specificity:", tn / (tn + fp))
-    print("Precision:", tp / (tp + fp))
-    print("Negative predictive value:", tn / (tn + fn))
+    print("Sensitivity (recall):", tp / (tp + fn))          #of real positives, how many did you catch
+    print("Specificity:", tn / (tn + fp))                   #of real negatives, how many did you catch
+    print("Precision:", tp / (tp + fp))                     #of real positives, how many were actually positive
+    print("Negative predictive value:", tn / (tn + fn))     #of real negatives, how many were actually negative
     print("Accuracy:", (tp + tn) / (tp + tn + fp + fn))
-    print("F1-score:", 2 * ( ( (tp / (tp + fp)) * (tp / (tp + fn)) ) / ( (tp / (tp + fp)) + (tp / (tp + fn)) ) ))
+    print("F1-score:", 2 * ( ( (tp / (tp + fp)) * (tp / (tp + fn)) ) / ( (tp / (tp + fp)) + (tp / (tp + fn)) ) ))   #mean of recall and precision
 
 
 #vocab: count all words in text column without repeting words
