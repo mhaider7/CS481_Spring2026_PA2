@@ -227,6 +227,105 @@ def test_naive_bayes(test, p_false, p_true, p_word_given_false, p_word_given_tru
         return metric['tp'], metric['fp'], metric['tn'], metric['fn']
     else:
         return sentence_false_prob, sentence_true_prob
+        
+### Helper function to create bag-of-words vector for a document
+def create_bow_vector(text, vocab):
+    """Create non-binary bag-of-words vector for a document"""
+    vector = {}
+    words = text.split()
+    for word in words:
+        if word in vocab:
+            vector[word] = vector.get(word, 0) + 1
+    return vector
+
+### Function to compute cosine similarity between two vectors
+def cosine_similarity(vec1, vec2):
+    """Compute cosine similarity between two bag-of-words vectors"""
+    # Find common words
+    common_words = set(vec1.keys()) & set(vec2.keys())
+    
+    # Calculate dot product
+    dot_product = sum(vec1[word] * vec2[word] for word in common_words)
+    
+    # Calculate magnitudes
+    mag1 = math.sqrt(sum(v ** 2 for v in vec1.values()))
+    mag2 = math.sqrt(sum(v ** 2 for v in vec2.values()))
+    
+    # Avoid division by zero
+    if mag1 == 0 or mag2 == 0:
+        return 0.0
+    
+    return dot_product / (mag1 * mag2)
+
+### Function to train kNN (just store training data)
+def train_knn(train_set, vocab):
+    """Train kNN by storing training documents and their vectors"""
+    train_data = []
+    for _, row in train_set.iterrows():
+        vector = create_bow_vector(row['text'], vocab)
+        train_data.append({
+            'vector': vector,
+            'label': row['label'],
+            'text': row['text']
+        })
+    return train_data
+
+### Function to predict using kNN
+def predict_knn(test_instance, train_data, k, vocab):
+    """Predict class for a test instance using kNN"""
+    # Create bag-of-words vector for test instance
+    if isinstance(test_instance, pd.DataFrame):
+        # If it's a dataframe row
+        test_vector = create_bow_vector(test_instance['text'], vocab)
+    else:
+        # If it's a string sentence
+        # Preprocess the sentence
+        preprocess_txt = re.sub(r'[^\w\s]', '', test_instance)
+        preprocess_txt = re.sub(r'\d+', '', preprocess_txt)
+        preprocess_txt = re.sub(r' +', ' ', preprocess_txt)
+        test_vector = create_bow_vector(preprocess_txt.lower(), vocab)
+    
+    # Calculate similarity with all training documents
+    similarities = []
+    for i, doc in enumerate(train_data):
+        sim = cosine_similarity(test_vector, doc['vector'])
+        # Use negative similarity for min-heap (to get top-k largest similarities)
+        similarities.append((-sim, i))
+    
+    # Get k nearest neighbors (with largest similarity)
+    k = min(k, len(train_data))  # Ensure k doesn't exceed training data size
+    nearest = heapq.nsmallest(k, similarities)
+    
+    # Count votes
+    votes = []
+    for _, idx in nearest:
+        votes.append(train_data[idx]['label'])
+    
+    # Determine majority class
+    vote_counts = Counter(votes)
+    majority_class = vote_counts.most_common(1)[0][0]
+    
+    return majority_class
+
+### Function to test kNN and return confusion matrix metrics
+def test_knn(test_set, train_data, k, vocab):
+    """Test kNN classifier on test set"""
+    metrics = {'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
+    
+    for _, row in test_set.iterrows():
+        true_label = row['label']
+        predicted_label = predict_knn(row, train_data, k, vocab)
+        
+        if true_label == 'True' and predicted_label == 'True':
+            metrics['tp'] += 1
+        elif true_label == 'False' and predicted_label == 'True':
+            metrics['fp'] += 1
+        elif true_label == 'False' and predicted_label == 'False':
+            metrics['tn'] += 1
+        elif true_label == 'True' and predicted_label == 'False':
+            metrics['fn'] += 1
+    
+    return metrics['tp'], metrics['fp'], metrics['tn'], metrics['fn']
 
 ###metric outputs the passed in and derived metric values
 def metric(tp, fp, tn, fn):
