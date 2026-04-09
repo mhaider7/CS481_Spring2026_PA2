@@ -4,6 +4,8 @@ import pandas as pd
 import sys, re
 from bs4 import BeautifulSoup
 import math
+import heapq
+from collections import Counter
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -274,7 +276,7 @@ def train_knn(train_set, vocab):
 def predict_knn(test_instance, train_data, k, vocab):
     """Predict class for a test instance using kNN"""
     # Create bag-of-words vector for test instance
-    if isinstance(test_instance, pd.DataFrame):
+    if isinstance(test_instance, pd.Series):
         # If it's a dataframe row
         test_vector = create_bow_vector(test_instance['text'], vocab)
     else:
@@ -311,7 +313,7 @@ def predict_knn(test_instance, train_data, k, vocab):
 def test_knn(test_set, train_data, k, vocab):
     """Test kNN classifier on test set"""
     metrics = {'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
-    
+
     for _, row in test_set.iterrows():
         true_label = row['label']
         predicted_label = predict_knn(row, train_data, k, vocab)
@@ -324,7 +326,7 @@ def test_knn(test_set, train_data, k, vocab):
             metrics['tn'] += 1
         elif true_label == 'True' and predicted_label == 'False':
             metrics['fn'] += 1
-    
+
     return metrics['tp'], metrics['fp'], metrics['tn'], metrics['fn']
 
 ###metric outputs the passed in and derived metric values
@@ -384,27 +386,27 @@ else:
     train_data = train_knn(train_set, vocab)
 
     # Determine optimal k (try odd values from 1 to 21)
-    print("Finding optima k value...")
+    print("Finding optimal k value...")
     best_k = 5 # default
     best_accuracy = 0
 
-    # Use a small validation set from trainingdata to find optimal k
+    # Use a small validation set from training data to find optimal k
     # Split training data into train and validation (80/20)
     val_size = int(len(train_set) * 0.2)
     train_subset = train_set.head(len(train_set) - val_size)
     val_subset = train_set.tail(val_size)
-
+    
     # Train on subset
     train_subset_data = train_knn(train_subset, vocab)
 
     # Train different k values
-    for k in range(1, 22, 2): # try odd k values from 1 to 21
+    for k in range(1, 10, 2): # try odd k values from 1 to 21
         tp, fp, tn, fn, = test_knn(val_subset, train_subset_data, k, vocab)
         accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             best_k = k
-
+    
     print(f"Selected k = {best_k} with validation accuracy = {best_accuracy:.4f}")
 
     print("Testing classifier...")
