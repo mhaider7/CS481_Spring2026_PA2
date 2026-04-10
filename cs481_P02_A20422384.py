@@ -250,8 +250,8 @@ def cosine_similarity(vec1, vec2):
     dot_product = sum(vec1[word] * vec2[word] for word in common_words)
     
     # Calculate magnitudes
-    mag1 = math.sqrt(sum(v ** 2 for v in vec1.values()))
-    mag2 = math.sqrt(sum(v ** 2 for v in vec2.values()))
+    mag1 = math.sqrt(sum((v ** 2) for v in vec1.values()))
+    mag2 = math.sqrt(sum((v ** 2) for v in vec2.values()))
     
     # Avoid division by zero
     if mag1 == 0 or mag2 == 0:
@@ -270,15 +270,33 @@ def train_knn(train_set, vocab):
             'label': row['label'],
             'text': row['text']
         })
-    return train_data
+    
+    #Create a frequency dictionary for the number of documents with word for tf-idf computation
+    train_data_freq = {}
+    for row in train_data:
+        for word, _ in row['vector'].items():
+            train_data_freq[word] = train_data_freq.get(word, 0) + 1
+
+    return train_data, train_data_freq
+
+def create_tf_idf_vector(instance_freq, num_of_docs, corpus_count):
+    tf_idf = {}
+    for _, (word, count) in enumerate(instance_freq.items()):
+        if word in corpus_count:
+            val = count * math.log(num_of_docs/corpus_count[word], 2)
+            #Drop any negative words, since they are too frequent and likely stop words
+            if val >= 1:
+                tf_idf[word] = val
+    return tf_idf
 
 ### Function to predict using kNN
-def predict_knn(test_instance, train_data, k, vocab):
+def predict_knn(test_instance, train_data, k, vocab, num_of_docs, corpus_count):
     """Predict class for a test instance using kNN"""
     # Create bag-of-words vector for test instance
     if isinstance(test_instance, pd.Series):
         # If it's a dataframe row
         test_vector = create_bow_vector(test_instance['text'], vocab)
+        test_vector = create_tf_idf_vector(test_vector, num_of_docs, corpus_count)
     else:
         # If it's a string sentence
         # Preprocess the sentence
@@ -286,6 +304,7 @@ def predict_knn(test_instance, train_data, k, vocab):
         preprocess_txt = re.sub(r'\d+', '', preprocess_txt)
         preprocess_txt = re.sub(r' +', ' ', preprocess_txt)
         test_vector = create_bow_vector(preprocess_txt.lower(), vocab)
+        test_vector = create_tf_idf_vector(test_vector, num_of_docs, corpus_count)
     
     # Calculate similarity with all training documents
     similarities = []
@@ -310,14 +329,13 @@ def predict_knn(test_instance, train_data, k, vocab):
     return majority_class
 
 ### Function to test kNN and return confusion matrix metrics
-def test_knn(test_set, train_data, k, vocab):
+def test_knn(test_set, train_data, k, vocab, num_of_docs, corpus_count):
     """Test kNN classifier on test set"""
     metrics = {'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
-
     for _, row in test_set.iterrows():
         true_label = row['label']
-        predicted_label = predict_knn(row, train_data, k, vocab)
-        
+        predicted_label = predict_knn(row, train_data, k, vocab, num_of_docs, corpus_count)
+        sys.stdout #buffer
         if true_label == 'True' and predicted_label == 'True':
             metrics['tp'] += 1
         elif true_label == 'False' and predicted_label == 'True':
@@ -383,7 +401,7 @@ else:
     print("\nTraining classifier...")
     
     # Train kNN (store training data)
-    train_data = train_knn(train_set, vocab)
+    train_data, corpus_count = train_knn(train_set, vocab)
 
     # Determine optimal k (try odd values from 1 to 21)
     print("Finding optimal k value...")
@@ -396,12 +414,15 @@ else:
     train_subset = train_set.head(len(train_set) - val_size)
     val_subset = train_set.tail(val_size)
     
-    # Train on subset
-    train_subset_data = train_knn(train_subset, vocab)
+    # Train on subset 80% of the train set
+    train_subset_data, _ = train_knn(train_subset, vocab)
+
+    #Now train_data (entire training set) and train_subset_data (80% of training set) are in b_o_w 
 
     # Train different k values
-    for k in range(1, 10, 2): # try odd k values from 1 to 21
-        tp, fp, tn, fn, = test_knn(val_subset, train_subset_data, k, vocab)
+    for k in range(1, 8, 2): # try odd k values from 1 to 21
+        #Pass in 20% of dataset, and the 80% turned into b_o_w dataset
+        tp, fp, tn, fn, = test_knn(val_subset, train_subset_data, k, vocab, len(train_subset), corpus_count)
         accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
         if accuracy > best_accuracy:
             best_accuracy = accuracy
