@@ -6,6 +6,10 @@ from bs4 import BeautifulSoup
 import math
 import heapq
 from collections import Counter
+from nltk.corpus import stopwords
+import nltk
+
+#nltk.download('stopwords')
 
 #Read in both datasets as pandas df
 fake_df = pd.read_csv("Fake.csv")
@@ -74,6 +78,13 @@ for i in range(len(TRUE)): TRUE[i] = re.sub(r'[^\w\s]', '', TRUE[i]); TRUE[i] = 
 #Lower-case everything
 for i in range(len(FAKE)): FAKE[i] = FAKE[i].lower()
 for i in range(len(TRUE)): TRUE[i] = TRUE[i].lower()
+
+#Load stop words
+#Reduces performance, commented out
+#stop_words = list(stopwords.words('english'))
+#for i in range(len(FAKE)): 
+#    fake_words = [word for word in FAKE[i].split() if word not in stop_words]
+#    FAKE[i] = ' '.join(fake_words)
 
 #Convert to dataframe
 fake_df = pd.DataFrame({'text': FAKE, 'label': 'False'})
@@ -240,24 +251,14 @@ def create_bow_vector(text, vocab):
             vector[word] = vector.get(word, 0) + 1
     return vector
 
-### Function to compute cosine similarity between two vectors
-def cosine_similarity(vec1, vec2):
-    """Compute cosine similarity between two bag-of-words vectors"""
+### Function to compute euclidean between two vectors
+def euclidean_distance(vec1, vec2):
+    """Compute euclidean distance between tf-idf & bag-of-words vectors"""
     # Find common words
     common_words = set(vec1.keys()) & set(vec2.keys())
-    
-    # Calculate dot product
-    dot_product = sum(vec1[word] * vec2[word] for word in common_words)
-    
-    # Calculate magnitudes
-    mag1 = math.sqrt(sum((v ** 2) for v in vec1.values()))
-    mag2 = math.sqrt(sum((v ** 2) for v in vec2.values()))
-    
-    # Avoid division by zero
-    if mag1 == 0 or mag2 == 0:
-        return 0.0
-    
-    return dot_product / (mag1 * mag2)
+    #Calculate euclidean dist
+    distance = math.sqrt(sum((math.pow(vec1[word] - vec2[word], 2)) for word in common_words))
+    return distance
 
 ### Function to train kNN (just store training data)
 def train_knn(train_set, vocab):
@@ -305,14 +306,15 @@ def predict_knn(test_instance, train_data, k, vocab, num_of_docs, corpus_count):
         preprocess_txt = re.sub(r' +', ' ', preprocess_txt)
         test_vector = create_bow_vector(preprocess_txt.lower(), vocab)
         test_vector = create_tf_idf_vector(test_vector, num_of_docs, corpus_count)
-    
-    # Calculate similarity with all training documents
+
+    # Cosine similarity is the math that is taking the longest
+    # Calculate distance between all training documents
     similarities = []
     for i, doc in enumerate(train_data):
-        sim = cosine_similarity(test_vector, doc['vector'])
+        sim = euclidean_distance(test_vector, doc['vector'])
         # Use negative similarity for min-heap (to get top-k largest similarities)
-        similarities.append((-sim, i))
-    
+        similarities.append((sim, i))
+
     # Get k nearest neighbors (with largest similarity)
     k = min(k, len(train_data))  # Ensure k doesn't exceed training data size
     nearest = heapq.nsmallest(k, similarities)
@@ -325,7 +327,7 @@ def predict_knn(test_instance, train_data, k, vocab, num_of_docs, corpus_count):
     # Determine majority class
     vote_counts = Counter(votes)
     majority_class = vote_counts.most_common(1)[0][0]
-    
+
     return majority_class
 
 ### Function to test kNN and return confusion matrix metrics
