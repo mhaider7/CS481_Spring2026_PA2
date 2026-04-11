@@ -431,7 +431,7 @@ else:
     print(f"Selected k = {best_k} with validation accuracy = {best_accuracy:.4f}")
 
     print("Testing classifier...")
-    tp, fp, tn, fn = test_knn(test_set, train_data, best_k, vocab)
+    tp, fp, tn, fn = test_knn(test_set, train_data, best_k, vocab, len(train_subset), corpus_count)
     print("\nTest results / metrics:")
     metric(tp, fp, tn, fn)
 
@@ -439,7 +439,7 @@ else:
     while (option[0].lower().strip() == 'y'):
         print()
         sentence = input("Enter your sentence/document: ")
-        predicted_class = predict_knn(sentence, train_data, best_k, vocab)
+        predicted_class = predict_knn(sentence, train_data, best_k, vocab, len(train_subset), corpus_count)
         print("\nSentence/document S:", sentence)
         print(f"was classified as {predicted_class}")
         print()
