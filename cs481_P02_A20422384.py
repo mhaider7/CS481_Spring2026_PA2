@@ -342,8 +342,10 @@ def predict_knn(test_instance, train_data, k, vocab, num_of_docs, corpus_count):
     
     # Count votes
     votes = []
-    for _, idx in nearest:
-        votes.append(train_data[idx]['label'])
+    for _, idx in nearest_neighbors:
+        votes.append(train_data[idx]['label']
+    #for _, idx in nearest:
+        #votes.append(train_data[idx]['label'])
     
     # Determine majority class
     vote_counts = Counter(votes)
@@ -382,6 +384,57 @@ def metric(tp, fp, tn, fn):
     print("Negative predictive value:", tn / (tn + fn))     #of real negatives, how many were actually negative
     print("Accuracy:", (tp + tn) / (tp + tn + fp + fn))
     print("F1-score:", 2 * ( ( (tp / (tp + fp)) * (tp / (tp + fn)) ) / ( (tp / (tp + fp)) + (tp / (tp + fn)) ) ))   #mean of recall and precision
+
+def test_on_small_subset(data_set, algo_type, test_size=100):
+    """
+    Test the classifier on a small subset of data to verify it works
+    """
+    print("\n" + "="*60)
+    print(f"TESTING ON SMALL SUBSET ({test_size} samples)")
+    print("="*60)
+    
+    # Take a small random sample
+    small_sample = data_set.sample(n=min(test_size, len(data_set)), random_state=42)
+    
+    # Split into train and test (70/30 for small test)
+    train_len = int(len(small_sample) * 0.7)
+    small_train = small_sample.head(train_len)
+    small_test = small_sample.tail(len(small_sample) - train_len)
+    
+    print(f"Small training set size: {len(small_train)}")
+    print(f"Small test set size: {len(small_test)}")
+    
+    # Build vocabulary from small training set
+    small_vocab = set()
+    for text in small_train['text']:
+        small_vocab.update(set(text.split()))
+    small_V = len(small_vocab)
+    
+    if algo_type == 0:  # Naive Bayes
+        print("\n--- Testing Naive Bayes on small subset ---")
+        p_false, p_true, p_word_given_false, p_word_given_true = train_naive_bayes(small_train, small_V)
+        tp, fp, tn, fn = test_naive_bayes(small_test, p_false, p_true, p_word_given_false, p_word_given_true)
+        
+        print("\nResults on small subset:")
+        metric(tp, fp, tn, fn)
+        
+    else:  # k-NN
+        print("\n--- Testing k-NN on small subset ---")
+        # Train kNN
+        train_data, corpus_count = train_knn(small_train, small_vocab)
+        
+        # Test with k=3 (small k for small dataset)
+        print("Testing with k=3...")
+        tp, fp, tn, fn = test_knn(small_test, train_data, 3, small_vocab, len(small_train), corpus_count)
+        
+        print("\nResults on small subset:")
+        metric(tp, fp, tn, fn)
+    
+    print("\n" + "="*60)
+    print("Small subset test complete. If metrics look reasonable, proceed with full test.")
+    print("="*60 + "\n")
+    
+    return True
 
 
 #vocab: count all words in text column without repeting words
