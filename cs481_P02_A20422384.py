@@ -256,7 +256,7 @@ def euclidean_distance(vec1, vec2):
     """Compute euclidean distance between tf-idf & bag-of-words vectors"""
     # Find common words
     #common_words = set(vec1.keys()) & set(vec2.keys())
-    all_words = set(vec1.keys)) | set(vec2.keys())
+    all_words = set(vec1.keys()) | set(vec2.keys())
     #Calculate euclidean dist
     distance = 0
     for word in all_words:
