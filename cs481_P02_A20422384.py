@@ -255,10 +255,17 @@ def create_bow_vector(text, vocab):
 def euclidean_distance(vec1, vec2):
     """Compute euclidean distance between tf-idf & bag-of-words vectors"""
     # Find common words
-    common_words = set(vec1.keys()) & set(vec2.keys())
+    #common_words = set(vec1.keys()) & set(vec2.keys())
+    all_words = set(vec1.keys)) | set(vec2.keys())
     #Calculate euclidean dist
-    distance = math.sqrt(sum((math.pow(vec1[word] - vec2[word], 2)) for word in common_words))
-    return distance
+    distance = 0
+    for word in all_words:
+        val1 = vec1.get(word, 0)
+        val2 = vec2.get(word, 0)
+        distance += math.pow(val1 - val2, 2)
+    #distance = math.sqrt(sum((math.pow(vec1[word] - vec2[word], 2)) for word in common_words))
+    return math.sqrt(distance)
+    #return distance
 
 ### Function to train kNN (just store training data)
 def train_knn(train_set, vocab):
@@ -307,17 +314,31 @@ def predict_knn(test_instance, train_data, k, vocab, num_of_docs, corpus_count):
         test_vector = create_bow_vector(preprocess_txt.lower(), vocab)
         test_vector = create_tf_idf_vector(test_vector, num_of_docs, corpus_count)
 
+    nearest_neighbors = []
+    
+    for i, doc in enumerate(train_data):
+        dist = euclidean_distance(test_vector, doc['vector'])
+        
+        # Push to heap (using negative distance for min-heap to act as max-heap)
+        if len(nearest_neighbors) < k:
+            heapq.heappush(nearest_neighbors, (-dist, i))
+        else:
+            # If current distance is smaller than the largest distance in heap
+            if dist < -nearest_neighbors[0][0]:
+                heapq.heapreplace(nearest_neighbors, (-dist, i))
+    
+
     # Cosine similarity is the math that is taking the longest
     # Calculate distance between all training documents
-    similarities = []
-    for i, doc in enumerate(train_data):
-        sim = euclidean_distance(test_vector, doc['vector'])
+    #similarities = []
+    #for i, doc in enumerate(train_data):
+        #sim = euclidean_distance(test_vector, doc['vector'])
         # Use negative similarity for min-heap (to get top-k largest similarities)
-        similarities.append((sim, i))
+        #similarities.append((sim, i))
 
     # Get k nearest neighbors (with largest similarity)
-    k = min(k, len(train_data))  # Ensure k doesn't exceed training data size
-    nearest = heapq.nsmallest(k, similarities)
+    #k = min(k, len(train_data))  # Ensure k doesn't exceed training data size
+    #nearest = heapq.nsmallest(k, similarities)
     
     # Count votes
     votes = []
@@ -373,8 +394,113 @@ V = len(vocab)
 train_set, test_set = train_test_split(data_set, TRAIN_SIZE)
 
 ###Console output (where the models are called and run and sentences is classified)
-print("Haider, Mazin, A20422384 solution:")
+#print("Haider, Mazin, A20422384 solution:")
+#print("Training set size:", TRAIN_SIZE,"%")
+#if ALGO == 0:
+    #print("Classifier type: Naive Bayes")
+    #print("\nTraining classifier...")
+    #p_false, p_true, p_word_given_false, p_word_given_true = train_naive_bayes(train_set, V)
+    #print("Testing classifier...")
+    #tp, fp, tn, fn = test_naive_bayes(test_set, p_false, p_true, p_word_given_false, p_word_given_true)
+    #print("\nTest results / metrics:")
+    #metric(tp, fp, tn, fn)
+
+    #option = 'Y'
+    #while (option[0].lower().strip() == 'y'):
+        #print()
+        #sentence = input("Enter your sentence/document: ")
+        #sent_p_false, sent_p_true = test_naive_bayes(sentence, p_false, p_true, p_word_given_false, p_word_given_true)
+        #print("\nSentence/document S:", sentence)
+        #if sent_p_true > sent_p_false:
+            #print("was classified as True")
+        #else:
+            #print("was classified as False")
+        #print("P(False | S) =", sent_p_false)
+        #print("P(True | S) =", sent_p_true)
+        #print()
+        #option = input("Do you want to enter another sentence [Y/N]? ")
+#else:
+    #print("Classifier type: k-NN")
+    #print("\nTraining classifier...")
+    
+    # Train kNN (store training data)
+    #train_data, corpus_count = train_knn(train_set, vocab)
+
+    # Determine optimal k (try odd values from 1 to 21)
+    #print("Finding optimal k value...")
+    #best_k = 5 # default
+    #best_accuracy = 0
+
+    # Use a small validation set from training data to find optimal k
+    # Split training data into train and validation (80/20)
+    #val_size = int(len(train_set) * 0.2)
+    #train_subset = train_set.head(len(train_set) - val_size)
+    #val_subset = train_set.tail(val_size)
+    
+    # Train on subset 80% of the train set
+    #train_subset_data, _ = train_knn(train_subset, vocab)
+
+    #Now train_data (entire training set) and train_subset_data (80% of training set) are in b_o_w 
+
+    # Train different k values
+    #for k in range(1, 8, 2): # try odd k values from 1 to 21
+        #Pass in 20% of dataset, and the 80% turned into b_o_w dataset
+        #tp, fp, tn, fn, = test_knn(val_subset, train_subset_data, k, vocab, len(train_subset), corpus_count)
+        #accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+        #if accuracy > best_accuracy:
+            #best_accuracy = accuracy
+            #best_k = k
+    
+    #print(f"Selected k = {best_k} with validation accuracy = {best_accuracy:.4f}")
+
+    #print("Testing classifier...")
+    #tp, fp, tn, fn = test_knn(test_set, train_data, best_k, vocab, len(train_subset), corpus_count)
+    #print("\nTest results / metrics:")
+    #metric(tp, fp, tn, fn)
+
+    #option = 'Y'
+    #while (option[0].lower().strip() == 'y'):
+        #print()
+        #sentence = input("Enter your sentence/document: ")
+        #predicted_class = predict_knn(sentence, train_data, best_k, vocab, len(train_subset), corpus_count)
+        #print("\nSentence/document S:", sentence)
+        #print(f"was classified as {predicted_class}")
+        #print()
+        #option = input("Do you want to enter another sentence [Y/N]?")
+
+#vocab: count all words in text column without repeting words
+V = 0; vocab = set()
+for text in data_set['text']:
+    vocab.update(set(text.split()))
+V = len(vocab)
+
+# Split data
+train_set, test_set = train_test_split(data_set, TRAIN_SIZE)
+
+### TEST ON SMALL SUBSET FIRST ###
+print("Haider, Mazin, A20507214 solution:")
 print("Training set size:", TRAIN_SIZE,"%")
+print("\n" + "="*60)
+print("STEP 1: Testing on small subset first...")
+print("="*60)
+
+# Test on small subset (e.g., 100 samples) to verify implementation
+test_on_small_subset(data_set, ALGO, test_size=100)
+
+# Ask user if they want to continue to full test
+print("\n" + "="*60)
+response = input("Small subset test complete. Continue with full dataset test? [Y/N]: ")
+print("="*60)
+
+if response.lower().strip() != 'y':
+    print("Exiting program.")
+    sys.exit(0)
+
+### FULL TEST ###
+print("\n" + "="*60)
+print("STEP 2: Running full test on complete dataset")
+print("="*60)
+
 if ALGO == 0:
     print("Classifier type: Naive Bayes")
     print("\nTraining classifier...")
@@ -407,7 +533,7 @@ else:
 
     # Determine optimal k (try odd values from 1 to 21)
     print("Finding optimal k value...")
-    best_k = 5 # default
+    best_k = 5  # default
     best_accuracy = 0
 
     # Use a small validation set from training data to find optimal k
@@ -419,20 +545,19 @@ else:
     # Train on subset 80% of the train set
     train_subset_data, _ = train_knn(train_subset, vocab)
 
-    #Now train_data (entire training set) and train_subset_data (80% of training set) are in b_o_w 
-
-    # Train different k values
-    for k in range(1, 8, 2): # try odd k values from 1 to 21
-        #Pass in 20% of dataset, and the 80% turned into b_o_w dataset
-        tp, fp, tn, fn, = test_knn(val_subset, train_subset_data, k, vocab, len(train_subset), corpus_count)
+    # Try different k values
+    print("Trying k values: 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21")
+    for k in range(1, 22, 2):
+        tp, fp, tn, fn = test_knn(val_subset, train_subset_data, k, vocab, len(train_subset), corpus_count)
         accuracy = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0
+        print(f"  k={k}: accuracy = {accuracy:.4f}")
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             best_k = k
     
-    print(f"Selected k = {best_k} with validation accuracy = {best_accuracy:.4f}")
+    print(f"\nSelected k = {best_k} with validation accuracy = {best_accuracy:.4f}")
 
-    print("Testing classifier...")
+    print("\nTesting classifier on full test set...")
     tp, fp, tn, fn = test_knn(test_set, train_data, best_k, vocab, len(train_subset), corpus_count)
     print("\nTest results / metrics:")
     metric(tp, fp, tn, fn)
@@ -445,9 +570,7 @@ else:
         print("\nSentence/document S:", sentence)
         print(f"was classified as {predicted_class}")
         print()
-        option = input("Do you want to enter another sentence [Y/N]?")
-
-
+        option = input("Do you want to enter another sentence [Y/N]? ")
 
 
 
