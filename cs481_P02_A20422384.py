@@ -343,7 +343,7 @@ def predict_knn(test_instance, train_data, k, vocab, num_of_docs, corpus_count):
     # Count votes
     votes = []
     for _, idx in nearest_neighbors:
-        votes.append(train_data[idx]['label']
+        votes.append(train_data[idx]['label'])
     #for _, idx in nearest:
         #votes.append(train_data[idx]['label'])
     
